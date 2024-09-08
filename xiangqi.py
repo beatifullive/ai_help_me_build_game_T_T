@@ -1,6 +1,7 @@
 import pygame
 import sys
 import time
+import os
 
 # 初始化Pygame
 pygame.init()
@@ -20,8 +21,14 @@ def load_piece_images():
     piece_names = ["车", "马", "象", "士", "将", "炮", "兵", "卒"]
     piece_images = {}
     for name in piece_names:
-        piece_images[f"{name}_red"] = pygame.image.load(f"xiangqiyoux/{name}_red.png")
-        piece_images[f"{name}_black"] = pygame.image.load(f"xiangqiyoux/{name}_black.png")
+        red_path = f"xiangqiyoux/{name}_red.png"
+        black_path = f"xiangqiyoux/{name}_black.png"
+        if not os.path.exists(red_path):
+            print(f"File not found: {red_path}")
+        if not os.path.exists(black_path):
+            print(f"File not found: {black_path}")
+        piece_images[f"{name}_red"] = pygame.image.load(red_path)
+        piece_images[f"{name}_black"] = pygame.image.load(black_path)
     return piece_images
 
 piece_images = load_piece_images()
@@ -357,15 +364,16 @@ def draw_buttons(screen):
     return restart_button, quit_button
 
 def reset_game():
-    global board, turn, selected_piece, victory_message, running
+    global board, turn, selected_piece, victory_message, game_over
     board = Board()
     turn = RED
     selected_piece = None
     victory_message = None
-    running = True
+    game_over = False
 
 # 初始化棋盘和棋子
 board = Board()
+game_over = False
 
 # 主游戏循环
 running = True
@@ -382,16 +390,17 @@ while running:
                 reset_game()
             elif quit_button.collidepoint(x, y):
                 running = False
-            else:
+            elif not game_over:
                 col, row = x // 80, y // 80
                 if selected_piece:
                     if board.move_piece(selected_piece, (row, col)):
                         victory_message = board.check_victory()
                         if victory_message:
                             print(victory_message)
-                            running = False
-                        turn = BLACK if turn == RED else RED  # 切换回合
-                        board.switch_turn(turn)
+                            game_over = True
+                        else:
+                            turn = BLACK if turn == RED else RED  # 切换回合
+                            board.switch_turn(turn)
                     selected_piece = None
                 else:
                     piece = board.get_piece_at((row, col))
@@ -399,7 +408,8 @@ while running:
                         selected_piece = piece
 
     # 更新思考时间
-    board.update_thinking_time(turn)
+    if not game_over:
+        board.update_thinking_time(turn)
 
     # 绘制游戏元素
     board.draw(screen)
@@ -409,108 +419,6 @@ while running:
 
     # 更新屏幕
     pygame.display.flip()
-
-# 显示胜利信息
-if victory_message:
-    font = pygame.font.Font("simhei.ttf", 72)
-    text = font.render(victory_message, True, RED if "红方" in victory_message else BLACK)
-    screen.blit(text, (200, 400))
-    pygame.display.flip()
-    pygame.time.wait(3000)
-
-# 显示积分信息
-font = pygame.font.Font("simhei.ttf", 36)
-score_text = f"红方积分: {board.red_score}  黑方积分: {board.black_score}"
-text = font.render(score_text, True, BLACK)
-screen.blit(text, (200, 500))
-pygame.display.flip()
-pygame.time.wait(3000)
-
-# 退出Pygame
-pygame.quit()
-sys.exit()
-
-def draw_buttons(screen):
-    font = pygame.font.Font("simhei.ttf", 36)
-    restart_button = pygame.Rect(820, 400, 160, 50)
-    quit_button = pygame.Rect(820, 460, 160, 50)
-    pygame.draw.rect(screen, GREEN, restart_button)
-    pygame.draw.rect(screen, RED, quit_button)
-    restart_text = font.render("重新开始", True, BLACK)
-    quit_text = font.render("退出游戏", True, BLACK)
-    screen.blit(restart_text, (830, 410))
-    screen.blit(quit_text, (830, 470))
-    return restart_button, quit_button
-
-def reset_game():
-    global board, turn, selected_piece, victory_message, running
-    board = Board()
-    turn = RED
-    selected_piece = None
-    victory_message = None
-    running = True
-
-# 初始化棋盘和棋子
-board = Board()
-
-# 主游戏循环
-running = True
-selected_piece = None
-turn = RED  # 红方先行
-victory_message = None
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            x, y = event.pos
-            if restart_button.collidepoint(x, y):
-                reset_game()
-            elif quit_button.collidepoint(x, y):
-                running = False
-            else:
-                col, row = x // 80, y // 80
-                if selected_piece:
-                    if board.move_piece(selected_piece, (row, col)):
-                        victory_message = board.check_victory()
-                        if victory_message:
-                            print(victory_message)
-                            running = False
-                        turn = BLACK if turn == RED else RED  # 切换回合
-                        board.switch_turn(turn)
-                    selected_piece = None
-                else:
-                    piece = board.get_piece_at((row, col))
-                    if piece and piece.color == turn:
-                        selected_piece = piece
-
-    # 更新思考时间
-    board.update_thinking_time(turn)
-
-    # 绘制游戏元素
-    board.draw(screen)
-
-    # 绘制按钮
-    restart_button, quit_button = draw_buttons(screen)
-
-    # 更新屏幕
-    pygame.display.flip()
-
-# 显示胜利信息
-if victory_message:
-    font = pygame.font.Font("simhei.ttf", 72)
-    text = font.render(victory_message, True, RED if "红方" in victory_message else BLACK)
-    screen.blit(text, (200, 400))
-    pygame.display.flip()
-    pygame.time.wait(3000)
-
-# 显示积分信息
-font = pygame.font.Font("simhei.ttf", 36)
-score_text = f"红方积分: {board.red_score}  黑方积分: {board.black_score}"
-text = font.render(score_text, True, BLACK)
-screen.blit(text, (200, 500))
-pygame.display.flip()
-pygame.time.wait(3000)
 
 # 退出Pygame
 pygame.quit()
